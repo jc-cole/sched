@@ -22,42 +22,29 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    // attempt to open provided text file
-
     FILE *workload_file = fopen(workload_filename, "r");
     if (workload_file == NULL) {
         printf("Unable to open file \"%s\"\n", workload_filename);
         exit(1);
     }
 
-    fseek(workload_file, 0, SEEK_END);
-    long file_size = ftell(workload_file);
-
-    char file_contents[file_size];
-    if (fgets(file_contents, file_size, workload_file) == NULL) {
-        printf("Error reading provided text file. \n");
-        exit(1);
-    }
-
-    char *cmds_array[256];
+    int MAX_PROCESSES = 256;
+    int MAX_LINE_SIZE = 256;
+    char cmds_array[MAX_PROCESSES][MAX_LINE_SIZE];
     int cmds_count = 0;
 
-    // split on newlines
-    char *delim = "\n";
     
-    char *token = strtok(file_contents, delim);
-
-    while (token != NULL) {
-        cmds_array[cmds_count] = token;
+    while (fgets(cmds_array[cmds_count], MAX_LINE_SIZE, workload_file)) {
+        int command_str_len = strlen(cmds_array[cmds_count]);
+        if (cmds_array[cmds_count][command_str_len - 1] == '\n') {
+            cmds_array[cmds_count][command_str_len - 1] = '\0';
+        }
         cmds_count++;
-        token = strtok(NULL, delim);
     }
 
-    for (int i = 0; i < cmds_count; i++) {
-        printf("%s", cmds_array[i]);
-    }
+    fclose(workload_file);
 
-
+    
 
     return 0;
 }
