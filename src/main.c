@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
     char* scheduler_policy = NULL;
@@ -7,11 +8,11 @@ int main(int argc, char *argv[]) {
     char* workload_filename = NULL;
     if (argc > 0) {
         for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i], "--policy")) {
+            if (strcmp(argv[i], "--policy") == 0) {
                 scheduler_policy = argv[++i];
             }
-            else if (strcmp(argv[i], "--quantum")) {
-                quantum = argv[++i];
+            else if (strcmp(argv[i], "--quantum") == 0) {
+                quantum = atoi(argv[++i]);
             } else {
                 workload_filename = argv[i];
             }
@@ -23,7 +24,7 @@ int main(int argc, char *argv[]) {
 
     // attempt to open provided text file
 
-    FILE *workload_file = fopen(workload_file, 'r');
+    FILE *workload_file = fopen(workload_filename, "r");
     if (workload_file == NULL) {
         printf("Unable to open file \"%s\"\n", workload_filename);
         exit(1);

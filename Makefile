@@ -1,9 +1,10 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
-OBJS = main.o util.o
+OBJS = build/main.o
 
-program: $(OBJS)
-	$(CC) $(OBJS) -o program
+sched: $(OBJS)
+	$(CC) $(OBJS) -o sched
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $<
+build/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+

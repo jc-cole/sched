@@ -1,0 +1,2 @@
+- get a working makefile
+- debug segfault
