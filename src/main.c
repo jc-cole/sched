@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <stdbool.h>
+
+#define MAX_PROCESSES 256
+#define MAX_LINE_SIZE 256
+#define MAX_COMMAND_LINE_ARGS 63
 
 
 typedef struct ParseResult {
@@ -13,10 +18,6 @@ typedef struct ParseResult {
 
 
 void free_parse_result(ParseResult parse_result) {
-    free(parse_result.path_to_executable);
-    for (int i = 0; i < parse_result.argc; i++) {
-        free(parse_result.argv[i]);
-    }
     free(parse_result.argv);
 }
 
@@ -24,10 +25,58 @@ void free_parse_result(ParseResult parse_result) {
 // 1. Splits line on any stretch of tabs/spaces (not newlines)
 // 2. Arguments wrapped in single/double quotes are not split
 // 3. Escaped whitespaces/quotes with '\' are treated as any other character by the parser
+// Note: Mutates passed string
 ParseResult parse_line(char *line) {
-    for (int i = 0; i < strlen(line); i++) {
-        
+
+    ParseResult result;
+    result.path_to_executable = NULL;
+    result.argc = 1;
+    result.argv = (char *) malloc(sizeof(char *) * (MAX_COMMAND_LINE_ARGS + 1));
+    for (int i = 0; i < MAX_COMMAND_LINE_ARGS + 1; i++) {
+        result.argv[i] = NULL;
     }
+
+    int line_length = strlen(line);
+
+    bool on_leading_spaces = true;
+
+    // first extract path to executable
+    int i = 0;
+    for (; i < line_length; i++) {
+        if ((line[i] == ' ' || line[i] == '\t') && on_leading_spaces) {
+            continue;
+        } else if ((line[i] == ' ' || line[i] == '\t') && !on_leading_spaces) {
+            line[i] = '\0'; // reached end of path to executable but still more args
+            i++;
+            result.argv[0] = result.path_to_executable;
+            break;
+        } else if (line[i] == '\0') {
+            result.argv[0] = result.path_to_executable;
+            result.argv[1] = NULL;
+            return result;
+        } else if (result.path_to_executable == NULL) {
+            on_leading_spaces = false;
+            result.path_to_executable = &line[i];
+        }
+    }
+
+    // now iteratively extract argument strings
+    on_leading_spaces = true;
+    for (; i < line_length; i++) {
+        if ((line[i] == ' ' || line[i] == '\t') && on_leading_spaces) {
+            continue;
+        } else if ((line[i] == ' ' || line[i] == '\t') && !on_leading_spaces) {
+            line[i] = '\0'; // reached end of path to executable but still more args
+        } else if (line[i] == '\0') {
+            return result;
+        } else if (result.argv[result.argc] == NULL) {
+            on_leading_spaces = false;
+            result.argv[result.argc] = &line[i];
+            result.argc++;
+        }
+    }
+
+    return result;
 }
 
 
@@ -57,8 +106,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int MAX_PROCESSES = 256;
-    int MAX_LINE_SIZE = 256;
     char cmds_array[MAX_PROCESSES][MAX_LINE_SIZE];
     int cmds_count = 0;
 
@@ -71,7 +118,19 @@ int main(int argc, char *argv[]) {
         cmds_count++;
     }
 
-    fclose(workload_file);
+    for (int i = 0; i < cmds_count; i++) {
+        ParseResult result = parse_line(cmds_array[i]);
+        printf("This is the argc: %d\n", result.argc);
+        printf("This is the executable path: %s\n", result.path_to_executable);
+        printf("First argv: %s\n", result.argv[0]);
+        printf("Second argv: %s\n", result.argv[1]);
+        printf("Third argv: %s\n", result.argv[2]);
+
+        execvp(result.path_to_executable, result.argv);
+        printf("the shit didn't work\n");
+    }
+
+    
 
     return 0;
 }
