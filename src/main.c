@@ -1,6 +1,35 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+
+
+typedef struct ParseResult {
+    char *path_to_executable;
+    char **argv;
+    int argc;
+} ParseResult;
+
+
+void free_parse_result(ParseResult parse_result) {
+    free(parse_result.path_to_executable);
+    for (int i = 0; i < parse_result.argc; i++) {
+        free(parse_result.argv[i]);
+    }
+    free(parse_result.argv);
+}
+
+// Policy:
+// 1. Splits line on any stretch of tabs/spaces (not newlines)
+// 2. Arguments wrapped in single/double quotes are not split
+// 3. Escaped whitespaces/quotes with '\' are treated as any other character by the parser
+ParseResult parse_line(char *line) {
+    for (int i = 0; i < strlen(line); i++) {
+        
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     char* scheduler_policy = NULL;
@@ -43,8 +72,6 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(workload_file);
-
-    
 
     return 0;
 }

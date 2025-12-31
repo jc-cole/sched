@@ -1,2 +1,1 @@
-- get a working makefile
-- debug segfault
+- write parser function from executable path + args to execve ready format
