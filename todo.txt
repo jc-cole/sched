@@ -1,1 +1,5 @@
-- write parser function from executable path + args to execve ready format
+Next:
+- create data structure for round robin scheduling policy (circularly linked list?)
+
+After MVP done:
+- add backslash escaping and quoted arguments to parser

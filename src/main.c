@@ -10,25 +10,24 @@
 #define MAX_COMMAND_LINE_ARGS 63
 
 
-typedef struct ParseResult {
+typedef struct ProcessNode {
     char *path_to_executable;
     char **argv;
     int argc;
-} ParseResult;
+    pid_t pid;
+    ProcessNode *next;
+} ProcessNode;
 
 
-void free_parse_result(ParseResult parse_result) {
+void free_parse_result(ProcessNode parse_result) {
     free(parse_result.argv);
 }
 
-// Policy:
-// 1. Splits line on any stretch of tabs/spaces (not newlines)
-// 2. Arguments wrapped in single/double quotes are not split
-// 3. Escaped whitespaces/quotes with '\' are treated as any other character by the parser
+// Policy: Splits line on any stretch of tabs/spaces (not newlines)
 // Note: Mutates passed string
-ParseResult parse_line(char *line) {
+ProcessNode parse_line(char *line) {
 
-    ParseResult result;
+    ProcessNode result;
     result.path_to_executable = NULL;
     result.argc = 1;
     result.argv = (char *) malloc(sizeof(char *) * (MAX_COMMAND_LINE_ARGS + 1));
@@ -118,19 +117,12 @@ int main(int argc, char *argv[]) {
         cmds_count++;
     }
 
+    ProcessNode processes[cmds_count];
     for (int i = 0; i < cmds_count; i++) {
-        ParseResult result = parse_line(cmds_array[i]);
-        printf("This is the argc: %d\n", result.argc);
-        printf("This is the executable path: %s\n", result.path_to_executable);
-        printf("First argv: %s\n", result.argv[0]);
-        printf("Second argv: %s\n", result.argv[1]);
-        printf("Third argv: %s\n", result.argv[2]);
-
-        execvp(result.path_to_executable, result.argv);
-        printf("the shit didn't work\n");
+        processes[i] = parse_line(cmds_array[i]);
     }
 
-    
 
+    
     return 0;
 }
