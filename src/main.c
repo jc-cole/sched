@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_PROCESSES 256
 #define MAX_LINE_SIZE 256
@@ -19,15 +21,72 @@ typedef struct ProcessNode {
     char **argv;
     int argc;
     pid_t pid;
-    ProcessNode *next;
-    ProcessNode *prev;
+    struct ProcessNode *next;
+    struct launcProcessNode *prev;
     ProcessState state;
+    int exit_code;
 } ProcessNode;
 
 
 void free_parse_result(ProcessNode parse_result) {
     free(parse_result.argv);
 }
+
+void log_processes(ProcessNode processes[], int cmds_count) {
+    for (int i = 0; i < cmds_count; i++) {
+        printf("PID: %ld\n", (long) processes[i].pid);
+        printf("State: %d\n", processes[i].state);
+        printf("Executable path: %s\n", processes[i].path_to_executable);
+        printf("argc: %d\n", processes[i].argc);
+        printf("\n");
+    }
+}
+
+int launch_tasks(ProcessNode processes[], int cmds_count) {
+    for (int i = 0; i < cmds_count; i++) {
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1) {
+            // handle error
+        }
+        fcntl(pipe_fd[1], F_SETFD, FD_CLOEXEC);
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            close(pipe_fd[0]);
+            raise(SIGSTOP);
+            execvp(processes[i].path_to_executable, processes[i].argv);
+            write(pipe_fd[1], &errno, sizeof(errno));
+            _exit(127);
+        } else {
+            close(pipe_fd[1]);
+            int st;
+            waitpid(pid, &st, WUNTRACED);
+            kill(pid, SIGCONT);
+            int e;
+            ssize_t n = read(pipe_fd[0], &e, sizeof(e));
+            if (n > 0) {
+                // exec failed
+                processes[i].state = EXECFAILURE;
+                processes[i].pid = pid;
+                continue;
+            }
+            kill(pid, SIGSTOP);
+            int exit_code = waitpid(pid, &st, WUNTRACED);
+            // inspect status to see if process has exited or stopped
+            if (WIFEXITED(st)) {
+                processes[i].state = DONE;
+                processes[i].exit_code = exit_code;
+            } else if (WIFSTOPPED(st)) {
+                processes[i].state = RUNNABLE;
+                processes[i].exit_code = -1;
+            }
+            processes[i].pid = pid;
+        }
+    }
+    return 0;
+}
+
+
 
 void connect_process_nodes(ProcessNode processes_array[], int cmds_count) {
     for (int i = 0; i < cmds_count - 1; i++) {
@@ -142,33 +201,9 @@ int main(int argc, char *argv[]) {
 
     connect_process_nodes(processes, cmds_count);
 
-    for (int i = 0; i < cmds_count; i++) {
-        int pipe_fd[2];
-        if (pipe(pipe_fd) == -1) {
-            // handle error
-        }
-        fcntl(pipe_fd[1], F_SETFD, FD_CLOEXEC);
+    launch_tasks(processes, cmds_count);
 
-        pid_t pid = fork();
-        if (pid == 0) {
-            close(pipe_fd[0]);
-            raise(SIGSTOP);
-            execvp(processes[i].path_to_executable, processes[i].argv);
-            write(pipe_fd[1], &errno, sizeof(errno));
-            _exit(127);
-        } else {
-            // parent
-            int e;
-            ssize_t n = read(pipe_fd[0], &n, sizeof(n));
-            if (n > 0) {
-                // exec failed
-                processes[i].state = EXECFAILURE;
-            }
-            
-            processes[i].pid = pid;
-            // still left to do
-        }
-    }
+    log_processes(processes, cmds_count);
     
     return 0;
 }

@@ -1,1 +1,4 @@
+./workloads/evens
+./workloads/odds
 ./workloads/count_by 5 1
+ls
