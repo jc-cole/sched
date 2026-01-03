@@ -4,11 +4,15 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <errno.h>
 
 #define MAX_PROCESSES 256
 #define MAX_LINE_SIZE 256
 #define MAX_COMMAND_LINE_ARGS 63
 
+typedef enum ProcessState { RUNNABLE, BLOCKED, DONE, EXECFAILURE } ProcessState;
 
 typedef struct ProcessNode {
     char *path_to_executable;
@@ -16,11 +20,25 @@ typedef struct ProcessNode {
     int argc;
     pid_t pid;
     ProcessNode *next;
+    ProcessNode *prev;
+    ProcessState state;
 } ProcessNode;
 
 
 void free_parse_result(ProcessNode parse_result) {
     free(parse_result.argv);
+}
+
+void connect_process_nodes(ProcessNode processes_array[], int cmds_count) {
+    for (int i = 0; i < cmds_count - 1; i++) {
+        processes_array[i].next = &processes_array[i+1];
+    }
+    processes_array[cmds_count].next = &processes_array[0];
+
+    for (int i = cmds_count - 1; i > 0; i--) {
+        processes_array[i].prev = &processes_array[i-1];
+    }
+    processes_array[0].prev = &processes_array[cmds_count-1];
 }
 
 // Policy: Splits line on any stretch of tabs/spaces (not newlines)
@@ -122,7 +140,35 @@ int main(int argc, char *argv[]) {
         processes[i] = parse_line(cmds_array[i]);
     }
 
+    connect_process_nodes(processes, cmds_count);
 
+    for (int i = 0; i < cmds_count; i++) {
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1) {
+            // handle error
+        }
+        fcntl(pipe_fd[1], F_SETFD, FD_CLOEXEC);
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            close(pipe_fd[0]);
+            raise(SIGSTOP);
+            execvp(processes[i].path_to_executable, processes[i].argv);
+            write(pipe_fd[1], &errno, sizeof(errno));
+            _exit(127);
+        } else {
+            // parent
+            int e;
+            ssize_t n = read(pipe_fd[0], &n, sizeof(n));
+            if (n > 0) {
+                // exec failed
+                processes[i].state = EXECFAILURE;
+            }
+            
+            processes[i].pid = pid;
+            // still left to do
+        }
+    }
     
     return 0;
 }
