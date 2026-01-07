@@ -1,5 +1,23 @@
-Next:
-- create data structure for round robin scheduling policy (circularly linked list?)
+Refactor plan:
+* set up file structure
+src/
+  main.c            // CLI parsing, reading workload, calling scheduler
+  workload.c        // read workload lines, tokenize, build Job array
+  rr.c              // round-robin implementation (poll/timerfd/signalfd)
+  signals.c         // block_signals(), make_signalfd()
+  timer.c           // make_timerfd(), arm_timerfd(ms)
+include/
+  job.h
+  rr.h
+  workload.h
+  util.h
+* set up makefile to support this new structure
 
-After MVP done:
-- add backslash escaping and quoted arguments to parser
+- Refactor parser (in workload.c)
+    Should be no macro'd limits on max command line args, max lines, max line size
+    should support commented out lines
+    should support quoted arguments
+    should ignore empty lines
+
+
+

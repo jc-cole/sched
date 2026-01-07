@@ -45,6 +45,7 @@ void log_processes(ProcessNode processes[], int cmds_count) {
         printf("State: %d\n", processes[i].state);
         printf("Executable path: %s\n", processes[i].path_to_executable);
         printf("argc: %d\n", processes[i].argc);
+        printf("Points to PID: %d", processes[i].next->pid);
         printf("\n");
     }
 }
@@ -147,15 +148,13 @@ int launch_tasks(ProcessNode processes[], int cmds_count) {
     return 0;
 }
 
-int dequeue_node(ProcessNode node) {
-    if (node.next == &node) { //if node is pointing to self
-        free_process_node(node);
+int dequeue_node(ProcessNode *node) {
+    if (node->next == node) { //if node is pointing to self
+        free_process_node(*node);
         return -1;
     }
-    node.prev->next = node.next;    if (fork() == 0) {
-        
-    }
-    free_process_node(node);
+    node->prev->next = node->next;
+    free_process_node(*node);
     return 0;
 }
 
@@ -165,7 +164,7 @@ int round_robin(ProcessNode processes[], int cmds_count, int quantum_ms) {
     int active_jobs = cmds_count;
     for (int i = 0; i < cmds_count; i++) {
         if (processes[i].state == DONE || processes[i].state == EXECFAILURE) {
-            if (dequeue_node(processes[i]) == -1) {
+            if (dequeue_node(&processes[i]) == -1) {
                 return 0;
             }
             active_jobs--;
@@ -184,7 +183,6 @@ int round_robin(ProcessNode processes[], int cmds_count, int quantum_ms) {
 
     while (active_jobs > 0) {
         // next: implement poll + timerfd + signalfd to implement waiting for quantam and signal handling
-        printf("%s\n", current_node->path_to_executable);
 
         kill(current_node->pid, SIGCONT);
 
@@ -194,6 +192,9 @@ int round_robin(ProcessNode processes[], int cmds_count, int quantum_ms) {
 
         if (pfds[0].revents & POLLIN) {
             // quantum expired
+            uint64_t expirations;
+            ssize_t n = read(pfds[0].fd, &expirations, sizeof(expirations));
+
             printf("the quantum expired\n");
             kill(current_node->pid, SIGSTOP);
             current_node = current_node->next;
@@ -202,24 +203,35 @@ int round_robin(ProcessNode processes[], int cmds_count, int quantum_ms) {
 
         if (pfds[1].revents & POLLIN) {
             // child exited / stopped
+            printf("we got a sigchld\n");
+
+            struct signalfd_siginfo si;
+            read(pfds[1].fd, &si, sizeof(si));
+
             pid_t pid;
             int st;
             bool current_process_done = false;
             while ((pid = waitpid(-1, &st, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
                 // WIFEXITED / WIFSIGNALED / WIFSTOPPED / WIFCONTINUED
                 if (WIFEXITED(st)) {
+                    printf("it was an exit. PID %d\n", pid);
                     handle_child_exit(get_process_node(pid, processes, cmds_count), WEXITSTATUS(st));
                     if (pid == current_node->pid) {
                         current_process_done = true;
                     }
                 } else if (WIFSIGNALED(st)) {
+                    printf("it was a term. PID %d\n", pid);
                     handle_child_term(get_process_node(pid, processes, cmds_count), WTERMSIG(st));
                     if (pid == current_node->pid) {
                         current_process_done = true;
                     }
+                } else {
+                    printf("it was something else\n");
                 }
             }
             if (current_process_done) {
+                dequeue_node(&current_node);
+                
                 continue;
             }
 
@@ -235,10 +247,10 @@ int round_robin(ProcessNode processes[], int cmds_count, int quantum_ms) {
 
 
 void connect_process_nodes(ProcessNode processes_array[], int cmds_count) {
-    for (int i = 0; i < cmds_count - 1; i++) {
+    for (int i = 0; i < cmds_count - 2; i++) { // loop up to second to last
         processes_array[i].next = &processes_array[i+1];
     }
-    processes_array[cmds_count].next = &processes_array[0];
+    processes_array[cmds_count - 1].next = &processes_array[0]; // manually set last node to point to first
 
     for (int i = cmds_count - 1; i > 0; i--) {
         processes_array[i].prev = &processes_array[i-1];
@@ -304,7 +316,7 @@ ProcessNode parse_line(char *line) {
 
 int main(int argc, char *argv[]) {
     char* scheduler_policy = NULL;
-    int quantum = 1000;
+    int quantum = 500;
     char* workload_filename = NULL;
     if (argc > 0) {
         for (int i = 1; i < argc; i++) {
@@ -348,6 +360,14 @@ int main(int argc, char *argv[]) {
     connect_process_nodes(processes, cmds_count);
 
     launch_tasks(processes, cmds_count);
+
+    printf("the processes are about to be logged");
+    log_processes(processes, cmds_count);
+    
+    printf("these are the only addys that current_node should take: \n");
+    for (int i = 0; i < cmds_count; i++) {
+        printf("%p\n", &processes[i]);
+    }
 
     round_robin(processes, cmds_count, quantum);
     
