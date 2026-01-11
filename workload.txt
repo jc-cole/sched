@@ -1,4 +1,10 @@
-./workloads/evens
-./workloads/odds
-./workloads/count_by 5 1
+    ./workloads/evens
+ ./workloads/odds
+./workloads/count_by "5" 1 
+./workloads/count_by "5" "1"
 ls
+
+
+    ./lots_of_args 1 2  3 4 "5" '6' "7 8" 9 10 11   12 13 14 # 15
+# balls
+./a_program 8
