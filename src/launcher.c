@@ -96,8 +96,8 @@ int launch_job(Job *job) {
             return 1;
         }
 
-        int err;
-        size_t got;
+        int err = 0;
+        size_t got = 0;
         while (got < sizeof(err)) {
             ssize_t r = read(pipe[0], (char*) &err + got, sizeof(err) - got);
 
@@ -107,7 +107,6 @@ int launch_job(Job *job) {
             }
 
             if (r < 0) {
-                printf("it's this launch failure\n");
                 job->status = LAUNCH_FAILURE;
                 return -1;
             }
