@@ -135,6 +135,7 @@ int launch_job(Job *job) {
             return -1;
         } else {
             job->status = post_exec_status;
+            job->pid = pid;
             return 0;
         }
     }
