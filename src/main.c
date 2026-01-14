@@ -17,50 +17,7 @@
 #include <unistd.h>
 #include "job.h"
 #include "parser.h"
-
-
-// int launch_tasks(ProcessNode processes[], int cmds_count) {
-//     for (int i = 0; i < cmds_count; i++) {
-//         int pipe_fd[2];
-//         if (pipe(pipe_fd) == -1) {
-//             // handle error
-//         }
-//         fcntl(pipe_fd[1], F_SETFD, FD_CLOEXEC);
-
-//         pid_t pid = fork();
-//         if (pid == 0) {
-//             close(pipe_fd[0]);
-//             raise(SIGSTOP);
-//             execvp(processes[i].path_to_executable, processes[i].argv);
-//             write(pipe_fd[1], &errno, sizeof(errno));
-//             _exit(127);
-//         } else {
-//             close(pipe_fd[1]);
-//             int st;
-//             waitpid(pid, &st, WUNTRACED);
-//             kill(pid, SIGCONT);
-//             int e;
-//             ssize_t n = read(pipe_fd[0], &e, sizeof(e));
-//             if (n > 0) {
-//                 // exec failed
-//                 processes[i].state = EXECFAILURE;
-//                 processes[i].pid = pid;
-//                 continue;
-//             }
-//             kill(pid, SIGSTOP);
-//             int exit_code = waitpid(pid, &st, WUNTRACED);
-//             // inspect status to see if process has exited or stopped
-//             if (WIFEXITED(st)) {
-//                 processes[i].state = DONE;
-//                 processes[i].exit_code = exit_code;
-//             } else if (WIFSTOPPED(st)) {
-//                 processes[i].state = RUNNABLE;
-//                 processes[i].exit_code = -1;
-//             }
-//             processes[i].pid = pid;
-//         }
-//     }
-//     return 0;
+#include "launcher.h"
 
 static void print_jobs_debug_temp(Job *jobs, size_t num_jobs) {
     printf("Current job statuses:\n");
@@ -145,14 +102,14 @@ int main(int argc, char *argv[]) {
 
     fclose(workload_file);
 
-    for (size_t i = 0; i < cmds_count; i++) {
-        printf("printing lines: \n");
-        printf("%s\n", cmds_array[i]);
-    }
-
     size_t num_jobs = 0;
     Job *jobs = parse_lines(cmds_array, cmds_count, &num_jobs);
 
-    print_jobs_debug_temp(jobs,  num_jobs);
+    for (size_t i = 0; i < num_jobs; i++) {
+        launch_job(&jobs[i]);
+    }
+
+    print_jobs_debug_temp(jobs, num_jobs);
+
     return 0;
 }

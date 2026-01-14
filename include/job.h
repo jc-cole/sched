@@ -10,6 +10,7 @@ typedef enum JobStatus {
     EXITED,
     TERMINATED,
     EXEC_FAILURE,
+    LAUNCH_FAILURE,
     EXEC_READY,
     EMPTY,
     SYNTAX_ERROR,
@@ -17,14 +18,15 @@ typedef enum JobStatus {
 } JobStatus;
 
 static char *const job_status_str[STATE_COUNT] = {
-    [RUNNING]       = "RUNNING",
-    [STOPPED]       = "STOPPED",
-    [EXITED]        = "EXITED",
-    [TERMINATED]    = "TERMINATED",
-    [EXEC_FAILURE]  = "EXEC_FAILURE",
-    [EXEC_READY]    = "EXEC_READY",
-    [EMPTY]         = "EMPTY",
-    [SYNTAX_ERROR]  = "SYNTAX_ERROR",
+    [RUNNING]        = "RUNNING",
+    [STOPPED]        = "STOPPED",
+    [EXITED]         = "EXITED",
+    [TERMINATED]     = "TERMINATED",
+    [EXEC_FAILURE]   = "EXEC_FAILURE",
+    [LAUNCH_FAILURE] = "LAUNCH_FAILURE",
+    [EXEC_READY]     = "EXEC_READY",
+    [EMPTY]          = "EMPTY",
+    [SYNTAX_ERROR]   = "SYNTAX_ERROR",
 };
 
 typedef struct Job {
