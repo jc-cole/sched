@@ -1,6 +1,7 @@
 #include "job.h"
 #include <stdlib.h>
 
+
 Job make_empty_job(void) {
     Job job;
     job.argv = NULL;
@@ -17,4 +18,18 @@ void free_job_contents(Job job) {
         free(job.argv[i]);
     }
     free(job.argv);
+}
+
+JobStatus interpret_status(int st) {
+    if (WIFEXITED(st)) {
+        return EXITED;
+    } else if (WIFSIGNALED(st)) {
+        return TERMINATED;
+    } else if (WIFSTOPPED(st)) {
+        return STOPPED;
+    } else if (WIFCONTINUED(st)) {
+        return RUNNING;
+    } else {
+        return LAUNCH_FAILURE;
+    }
 }

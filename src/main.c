@@ -18,6 +18,7 @@
 #include "job.h"
 #include "parser.h"
 #include "launcher.h"
+#include "rr.h"
 
 static void print_jobs_debug_temp(Job *jobs, size_t num_jobs) {
     printf("Current job statuses:\n");
@@ -42,7 +43,7 @@ static void print_jobs_debug_temp(Job *jobs, size_t num_jobs) {
 
 int main(int argc, char *argv[]) {
     char* scheduler_policy = "none";
-    int quantum = 500;
+    int quantum = 5;
     char* workload_filename = NULL;
     if (argc > 0) {
         for (int i = 1; i < argc; i++) {
@@ -108,6 +109,10 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < num_jobs; i++) {
         launch_job(&jobs[i]);
     }
+
+    print_jobs_debug_temp(jobs, num_jobs);
+
+    round_robin(jobs, num_jobs, quantum);
 
     print_jobs_debug_temp(jobs, num_jobs);
 

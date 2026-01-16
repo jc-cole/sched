@@ -31,18 +31,6 @@
 //  inspect status to see if child exited -> set status exited
 //  inspect status to see if child terminated -> set status terminated
 
-static JobStatus interpret_status(int st) {
-    if (WIFEXITED(st)) {
-        return EXITED;
-    } else if (WIFSIGNALED(st)) {
-        return TERMINATED;
-    } else if (WIFSTOPPED(st)) {
-        return STOPPED;
-    } else {
-        return LAUNCH_FAILURE;
-    }
-}
-
 
 int launch_job(Job *job) {
     int pipe[2];

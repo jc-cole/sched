@@ -1,7 +1,6 @@
 #ifndef LAUNCHER_H
 #define LAUNCHER_H
 
-
 #include "job.h"
 #include <unistd.h>
 #include <fcntl.h>

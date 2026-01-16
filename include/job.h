@@ -1,8 +1,11 @@
 #ifndef JOB_H
 #define JOB_H
 
+#define _GNU_SOURCE
+
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 typedef enum JobStatus {
     RUNNING,
@@ -41,5 +44,7 @@ typedef struct Job {
 Job make_empty_job(void);
 
 void free_job_contents(Job job);
+
+JobStatus interpret_status(int st);
 
 #endif
