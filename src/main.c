@@ -19,27 +19,7 @@
 #include "parser.h"
 #include "launcher.h"
 #include "rr.h"
-
-static void print_jobs_debug_temp(Job *jobs, size_t num_jobs) {
-    printf("Current job statuses:\n");
-    for (size_t i = 0; i < num_jobs; i++) {
-        printf("index: %zu\n", i);
-        printf("    argc: %zu\n", jobs[i].argc);
-        if (jobs[i].argv != NULL) {
-            printf("    argv:\n");
-            for (size_t arg = 0; arg < jobs[i].argc; arg++) {
-                printf("        %zu. %s\n", arg, jobs[i].argv[arg]);
-            }
-        } else {
-            printf("    argv: NULL\n");
-        }
-        printf("    pid: %ld\n", (long) jobs[i].pid);
-        printf("    status: %s\n", job_status_str[jobs[i].status]);
-        printf("    exit code: %d\n", jobs[i].exit_code);
-        printf("    terminating signal: %d\n", jobs[i].terminating_signal);
-        printf("\n");
-    }
-}
+#include "util.h"
 
 int main(int argc, char *argv[]) {
     char* scheduler_policy = "none";
@@ -85,7 +65,6 @@ int main(int argc, char *argv[]) {
         size_t cmd_str_len = strlen(cmd_str_buffer);
         cmds_array[cmds_count] = malloc(sizeof(char) * (cmd_str_len + 1));
 
-        
         strcpy(cmds_array[cmds_count], cmd_str_buffer);
 
         for (int i = 0; i < file_size + 1; i++) {
@@ -112,9 +91,9 @@ int main(int argc, char *argv[]) {
 
     print_jobs_debug_temp(jobs, num_jobs);
 
-    round_robin(jobs, num_jobs, quantum);
+    int status = round_robin(jobs, num_jobs, quantum);
 
-    print_jobs_debug_temp(jobs, num_jobs);
+    printf("round robin result: %d\n", status);
 
     return 0;
 }

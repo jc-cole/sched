@@ -1,2 +1,6 @@
 
-- launcher still buggy, tasks that should be execfailures reported as stopped/exited indeterminately
+- rename hanle_sigchld to reap_and_update_all
+
+- debug until test workload passes w/o error
+
+- design something to display scheduler actions

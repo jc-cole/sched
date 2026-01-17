@@ -1,6 +1,9 @@
 #include "rr.h"
 
-static int handle_sigchld(Job *jobs, size_t num_jobs, size_t *active_jobs) {
+// debug
+int reported_statuses[STATE_COUNT];
+
+static int reap_and_update(Job *jobs, size_t num_jobs, size_t *active_jobs) {
     pid_t pid;
     int st;
     while (1) {
@@ -13,24 +16,41 @@ static int handle_sigchld(Job *jobs, size_t num_jobs, size_t *active_jobs) {
         if (pid == -1) {
             return -1;
         }
-        
+
+        // debug
+        reported_statuses[interpret_status(st)]++;
+
+        int search_success = 0;
         for (size_t i = 0; i < num_jobs; i++) {
-            if (jobs[i].pid == pid) {
+            
+            if (jobs[i].pid == pid && (jobs[i].status == STOPPED || jobs[i].status == RUNNING)) {
 
                 JobStatus new_status = interpret_status(st);
 
                 if (!(new_status == RUNNING || new_status == STOPPED)) {
-                    active_jobs--;
+                    (*active_jobs)--;
                 }
 
                 jobs[i].status = new_status;
+
+                search_success = 1;
                 break;
             }
+        }
+
+        if (!search_success) {
+            printf("here\n");
+            return -1;
         }
     }
 }
 
 int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
+
+    // debug stuff
+    for (int i = 0; i < STATE_COUNT; i++) {
+        reported_statuses[i] = 0;
+    }
 
     int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (timer_fd == -1) {
@@ -50,9 +70,19 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
     poll_fds[1].fd = sigchld_fd;
     poll_fds[1].events = POLLIN;
 
-    size_t active_jobs = num_jobs;
-    for (size_t i = 0; active_jobs > 0; i = ++i % num_jobs) {
+    size_t active_jobs = 0;
+    for (size_t i = 0; i < num_jobs; i++) {
+        if (jobs[i].status == STOPPED) {
+            active_jobs++;
+        }
+    }
+
+    for (size_t i = 0; active_jobs > 0; i = (i + 1) % num_jobs) {
+
         if (jobs[i].status != STOPPED) {
+            if (reap_and_update(jobs, num_jobs, &active_jobs) == -1) {
+                return -1;
+            }
             continue;
         }
 
@@ -76,7 +106,10 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
         }
 
         while (1) {
-            int n = poll(poll_fds, 2, -1);
+
+            if (poll(poll_fds, 2, -1) == -1) {
+                return -1;
+            }
 
             if (poll_fds[1].revents & POLL_IN) { // sigchld
 
@@ -86,7 +119,7 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
                     return -1;
                 }
 
-                if (handle_sigchld(jobs, num_jobs, &active_jobs) == -1) {
+                if (reap_and_update(jobs, num_jobs, &active_jobs) == -1) {
                     return -1;
                 }
 
@@ -107,13 +140,12 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
                     return -1;
                 }
 
-                int st;
                 if (waitpid(jobs[i].pid, &st, WUNTRACED | WCONTINUED) == -1) {
                     return -1;
                 }
 
                 jobs[i].status = interpret_status(st);
-                continue;
+                break;
             }
         }
     }
