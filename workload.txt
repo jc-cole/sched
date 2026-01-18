@@ -1,6 +1,5 @@
 echo start
 sleep 0.01
-yes > /dev/null
 cat
 sleep 0.05
 /does/not/exist

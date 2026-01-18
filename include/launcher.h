@@ -2,6 +2,7 @@
 #define LAUNCHER_H
 
 #include "job.h"
+#include "reap.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,6 +11,6 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-int launch_job(Job *job);
+int launch_jobs(Job *jobs, size_t num_jobs);
 
 #endif

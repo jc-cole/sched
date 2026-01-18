@@ -1,6 +1,12 @@
 
-- rename hanle_sigchld to reap_and_update_all
-
 - debug until test workload passes w/o error
 
+- log exit codes and terminating signals in Job structs after reaping
+
+- fix memory leaks
+
+- design sigint protocol
+
 - design something to display scheduler actions
+
+- handle case where process number limit reached

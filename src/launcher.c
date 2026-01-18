@@ -1,14 +1,8 @@
 #define _GNU_SOURCE
 
-#include "job.h"
+
 #include "launcher.h"
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <errno.h>
+
 
 // make a pipe from child to parent (pipe2 + O_CLOEXEC)
 // fork()
@@ -31,8 +25,7 @@
 //  inspect status to see if child exited -> set status exited
 //  inspect status to see if child terminated -> set status terminated
 
-
-int launch_job(Job *job) {
+static int launch_job(Job *job) {
     int pipe[2];
     pipe2(pipe, O_CLOEXEC);
     pid_t pid = fork();
@@ -56,6 +49,8 @@ int launch_job(Job *job) {
         _exit(127);
     } else {
         close(pipe[1]);
+
+        job->pid = pid;
 
         int st;
         if (waitpid(pid, &st, WUNTRACED) == -1) {
@@ -123,8 +118,26 @@ int launch_job(Job *job) {
             return -1;
         } else {
             job->status = post_exec_status;
-            job->pid = pid;
             return 0;
         }
     }
 }
+
+int launch_jobs(Job *jobs, size_t num_jobs) {
+    int syscall_error = 0;
+
+    for (size_t i = 0; i < num_jobs; i++) {
+        if (launch_job(&jobs[i]) == -1) {
+            syscall_error = 1;
+        }
+    }
+
+    if (reap_and_update(jobs, num_jobs, NULL, NULL) == -1) {
+        return -1;
+    }
+
+    if (syscall_error) return -1;
+    return 0;
+}
+
+

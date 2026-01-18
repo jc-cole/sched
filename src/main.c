@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    printf("Quantum: %d", quantum);
-    printf("Scheduler policy: %s", scheduler_policy);
+    printf("Quantum: %d\n", quantum);
+    printf("Scheduler policy: %s\n", scheduler_policy);
 
     FILE *workload_file = fopen(workload_filename, "r");
     if (workload_file == NULL) {
@@ -85,15 +85,15 @@ int main(int argc, char *argv[]) {
     size_t num_jobs = 0;
     Job *jobs = parse_lines(cmds_array, cmds_count, &num_jobs);
 
-    for (size_t i = 0; i < num_jobs; i++) {
-        launch_job(&jobs[i]);
-    }
+    int active_jobs = launch_jobs(jobs, num_jobs);
 
-    print_jobs_debug_temp(jobs, num_jobs);
+    printf("launch jobs result: %d\n", active_jobs);
 
     int status = round_robin(jobs, num_jobs, quantum);
 
     printf("round robin result: %d\n", status);
+
+    print_jobs_debug_temp(jobs, num_jobs);
 
     return 0;
 }
