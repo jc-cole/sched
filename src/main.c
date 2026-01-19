@@ -87,6 +87,8 @@ int main(int argc, char *argv[]) {
 
     int active_jobs = launch_jobs(jobs, num_jobs);
 
+    print_jobs_debug_temp(jobs, num_jobs);
+
     printf("launch jobs result: %d\n", active_jobs);
 
     int status = round_robin(jobs, num_jobs, quantum);
