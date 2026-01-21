@@ -21,13 +21,21 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
         return -1;
     }
 
-    struct pollfd poll_fds[2];
+    int sigint_fd = make_sigint_fd();
+    if (sigint_fd == -1) {
+        return -1;
+    }
+
+    struct pollfd poll_fds[3];
 
     poll_fds[0].fd = timer_fd;
     poll_fds[0].events = POLLIN;
 
     poll_fds[1].fd = sigchld_fd;
     poll_fds[1].events = POLLIN;
+
+    poll_fds[2].fd = sigint_fd;
+    poll_fds[2].events = POLLIN;
 
     size_t active_jobs = 0;
     for (size_t i = 0; i < num_jobs; i++) {
@@ -65,7 +73,7 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
 
         while (1) {
 
-            if (poll(poll_fds, 2, -1) == -1) {
+            if (poll(poll_fds, 3, -1) == -1) {
                 perror("poll");
                 exit(EXIT_FAILURE);
             }
@@ -91,6 +99,31 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
                 if (jobs[i].status != RUNNING) {
                     break;
                 }
+            }
+
+            if (poll_fds[2].revents & POLL_IN) { // sigint
+
+                struct signalfd_siginfo si;
+                ssize_t n = read(sigint_fd, &si, sizeof(si));
+                if (n == -1) {
+                    perror("read");
+                    exit(EXIT_FAILURE);
+                }
+                if (n != sizeof(si)) {
+                    // error message
+                    return -1;
+                }
+
+                if (reap_and_update(jobs, num_jobs, &active_jobs, reported_statuses) == -1) {
+                    // error message handle by reap_and_update
+                    return -1;
+                }
+
+                if (jobs[i].status != RUNNING) {
+                    break;
+                }
+
+                break;
             }
 
             if (poll_fds[0].revents & POLL_IN) { // quantum expiry

@@ -1,6 +1,6 @@
-echo start
-sleep 0.01
-sleep 0.05
-/does/not/exist
-sleep 1
+echo one
+echo two
+echo three
+echo four
+echo five
 echo done

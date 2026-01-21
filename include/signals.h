@@ -9,4 +9,6 @@
 
 int make_sigchld_fd(void);
 
+int make_sigint_fd(void);
+
 #endif

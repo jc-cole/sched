@@ -4,6 +4,29 @@
 #include "launcher.h"
 
 
+static int redirect_output_to_log(const char *path) {
+    int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+
+    if (fd == -1) {
+        perror("open");
+        _exit(127);
+    }
+
+    if (dup2(fd, STDOUT_FILENO) < 0) {
+        perror("dup2");
+        _exit(127);
+    }
+    if (dup2(fd, STDERR_FILENO) < 0) {
+        perror("dup2");
+        _exit(127);
+    }
+
+    // no longer need the original fd if it's not stdout/stderr
+    if (fd > STDERR_FILENO) close(fd);
+    return 1;
+}
+
+
 // make a pipe from child to parent (pipe2 + O_CLOEXEC)
 // fork()
 // In child:
@@ -25,12 +48,20 @@
 //  inspect status to see if child exited -> set status exited
 //  inspect status to see if child terminated -> set status terminated
 
-static int launch_job(Job *job) {
+static int launch_job(Job *job, pid_t *children_pgid) {
     int pipe[2];
     pipe2(pipe, O_CLOEXEC);
     pid_t pid = fork();
     if (pid == 0) {
         close(pipe[0]);
+
+        if (*children_pgid == -1) { // error handling needed here
+            setpgid(0, 0);
+        } else {
+            setpgid(0, *children_pgid);
+        }
+
+        redirect_output_to_log("children.log");
         
         raise(SIGSTOP);
 
@@ -49,6 +80,13 @@ static int launch_job(Job *job) {
         _exit(127);
     } else {
         close(pipe[1]);
+
+        if (*children_pgid == -1) { // error handling needed here
+            setpgid(pid, pid);
+            *children_pgid = pid;
+        } else {
+            setpgid(pid, *children_pgid);
+        }
 
         job->pid = pid;
 
@@ -126,8 +164,17 @@ static int launch_job(Job *job) {
 int launch_jobs(Job *jobs, size_t num_jobs) {
     int syscall_error = 0;
 
+    // clear log file
+    int fd = open("children.log", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) { perror("open children.log"); exit(1); }
+    close(fd);
+
+    pid_t sched_pgid = getpgrp();
+    tcsetpgrp(STDIN_FILENO, sched_pgid); 
+
+    pid_t children_pgid = -1;
     for (size_t i = 0; i < num_jobs; i++) {
-        if (launch_job(&jobs[i]) == -1) {
+        if (launch_job(&jobs[i], &children_pgid) == -1) {
             syscall_error = 1;
         }
     }
@@ -137,6 +184,7 @@ int launch_jobs(Job *jobs, size_t num_jobs) {
     }
 
     if (syscall_error) return -1;
+
     return 0;
 }
 

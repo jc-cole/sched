@@ -85,6 +85,14 @@ int main(int argc, char *argv[]) {
     size_t num_jobs = 0;
     Job *jobs = parse_lines(cmds_array, cmds_count, &num_jobs);
 
+    // sigset_t mask;
+    // sigemptyset(&mask);
+    // sigaddset(&mask, SIGINT);
+
+    // if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+    //     return -1;
+    // }
+
     int active_jobs = launch_jobs(jobs, num_jobs);
 
     print_jobs_debug_temp(jobs, num_jobs);
