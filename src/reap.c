@@ -1,6 +1,7 @@
 
 #include "reap.h"
 #include "timer.h"
+#include "util.h"
 
 // decrements active_job_count if passed whenever the given job was previously active (stopped/running) 
 // and became inactive (not stopped/running)
@@ -45,7 +46,7 @@ int sigint_protocol(Job *jobs, size_t num_jobs, struct pollfd poll_fds[3], pid_t
 
     while (*active_job_count > 0) {
 
-
+        print_jobs_debug_temp(jobs, num_jobs);
 
         if (poll(poll_fds, 3, -1) == -1) {
             perror("poll");
@@ -143,13 +144,18 @@ int reap_and_update(Job *jobs, size_t num_jobs, size_t *active_job_count, int* r
             reported_statuses_debug[interpret_status(st)]++;
         }
 
+        bool search_success = false;
         for (size_t i = 0; i < num_jobs; i++) {
             if (jobs[i].pid == pid) {
                 update_job_status(&jobs[i], st, active_job_count);
-                return 0;
+                search_success = true;
+                break;
             }
         }
 
-        return -1; // job with reaped pid not found in job state array
+        if (!search_success) {
+            return -1;
+        } // job with reaped pid not found in job state array
     }
+
 }

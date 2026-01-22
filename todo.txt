@@ -1,11 +1,7 @@
 
-- debug until test workload passes w/o error
-
-- log exit codes and terminating signals in Job structs after reaping
+- design sigint protocol -> still hangs, needs fix
 
 - fix memory leaks
-
-- design sigint protocol
 
 - design something to display scheduler actions
 

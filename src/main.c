@@ -98,6 +98,10 @@ int main(int argc, char *argv[]) {
 
     print_jobs_debug_temp(jobs, num_jobs);
 
+    for (size_t i = 0; i < num_jobs; i++) {
+        printf("PID: %d, PGID: %d\n", jobs[i].pid, getpgid(jobs[i].pid));
+    }
+
     printf("launch jobs result: %d\n", active_jobs);
 
     printf("children pgid: %d\n", children_pgid);
