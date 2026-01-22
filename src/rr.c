@@ -4,7 +4,7 @@
 // debug
 int reported_statuses[STATE_COUNT];
 
-int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
+int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) {
 
     // debug
     for (int i = 0; i < STATE_COUNT; i++) {
@@ -113,17 +113,8 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms) {
                     // error message
                     return -1;
                 }
-
-                if (reap_and_update(jobs, num_jobs, &active_jobs, reported_statuses) == -1) {
-                    // error message handle by reap_and_update
-                    return -1;
-                }
-
-                if (jobs[i].status != RUNNING) {
-                    break;
-                }
-
-                break;
+                /////
+                return sigint_protocol(jobs, num_jobs, poll_fds, children_pid, &active_jobs);
             }
 
             if (poll_fds[0].revents & POLL_IN) { // quantum expiry

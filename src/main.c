@@ -85,21 +85,24 @@ int main(int argc, char *argv[]) {
     size_t num_jobs = 0;
     Job *jobs = parse_lines(cmds_array, cmds_count, &num_jobs);
 
-    // sigset_t mask;
-    // sigemptyset(&mask);
-    // sigaddset(&mask, SIGINT);
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
 
-    // if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
-    //     return -1;
-    // }
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+        return -1;
+    }
 
-    int active_jobs = launch_jobs(jobs, num_jobs);
+    pid_t children_pgid;
+    int active_jobs = launch_jobs(jobs, num_jobs, &children_pgid);
 
     print_jobs_debug_temp(jobs, num_jobs);
 
     printf("launch jobs result: %d\n", active_jobs);
 
-    int status = round_robin(jobs, num_jobs, quantum);
+    printf("children pgid: %d\n", children_pgid);
+
+    int status = round_robin(jobs, num_jobs, quantum, children_pgid);
 
     printf("round robin result: %d\n", status);
 

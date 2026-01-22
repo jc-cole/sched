@@ -11,6 +11,6 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-int launch_jobs(Job *jobs, size_t num_jobs);
+int launch_jobs(Job *jobs, size_t num_jobs, pid_t *children_pid);
 
 #endif

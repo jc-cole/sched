@@ -1,5 +1,6 @@
 
 #include "reap.h"
+#include "timer.h"
 
 // decrements active_job_count if passed whenever the given job was previously active (stopped/running) 
 // and became inactive (not stopped/running)
@@ -24,6 +25,101 @@ JobStatus update_job_status(Job *job, int wpid_status, size_t *active_job_count)
     }
 
     return new_status;
+}
+
+int sigint_protocol(Job *jobs, size_t num_jobs, struct pollfd poll_fds[3], pid_t children_pid, size_t *active_job_count) {
+
+    int SIGTERM_GRACE_PERIOD_MS = 1000;
+
+    reset_timer(poll_fds[3].fd, SIGTERM_GRACE_PERIOD_MS);
+
+    if (kill(-children_pid, SIGCONT) == -1) {
+        perror("kill");
+        exit(EXIT_FAILURE);
+    }
+
+    if (kill(-children_pid, SIGTERM) == -1) {
+        perror("kill");
+        exit(EXIT_FAILURE);
+    }
+
+    while (*active_job_count > 0) {
+
+
+
+        if (poll(poll_fds, 3, -1) == -1) {
+            perror("poll");
+            exit(EXIT_FAILURE);
+        }
+
+        if (poll_fds[1].revents & POLL_IN) { // sigchld
+
+            struct signalfd_siginfo si;
+            ssize_t n = read(poll_fds[1].fd, &si, sizeof(si));
+            if (n == -1) {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+            if (n != sizeof(si)) {
+                // error message
+                return -1;
+            }
+
+            if (reap_and_update(jobs, num_jobs, active_job_count, NULL) == -1) {
+                // error message
+                return -1;
+            }
+
+            continue;
+        }
+
+        if (poll_fds[2].revents & POLL_IN) { // sigint (double ctrl c)
+
+            struct signalfd_siginfo si;
+            ssize_t n = read(poll_fds[2].fd, &si, sizeof(si));
+            if (n == -1) {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+            if (n != sizeof(si)) {
+                // error message
+                return -1;
+            }
+
+            if (kill(-children_pid, SIGKILL) == -1) {
+                perror("kill");
+                exit(EXIT_FAILURE);
+            }
+
+            continue;
+            
+        }
+
+        if (poll_fds[0].revents & POLL_IN) { // grace period expiry
+
+            uint64_t exp_count;
+            ssize_t bytes_read = read(poll_fds[0].fd, &exp_count, sizeof(uint64_t));
+
+            if (bytes_read == -1) {
+                perror("kill");
+                exit(EXIT_FAILURE);
+            }
+
+            if (bytes_read != sizeof(uint64_t)) {
+                // error message
+                return -1;
+            }
+
+            if (kill(-children_pid, SIGKILL) == -1) {
+                perror("kill");
+                exit(EXIT_FAILURE);
+            }
+
+            continue;
+        }
+    }
+
+    return 0;
 }
 
 

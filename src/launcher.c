@@ -161,7 +161,7 @@ static int launch_job(Job *job, pid_t *children_pgid) {
     }
 }
 
-int launch_jobs(Job *jobs, size_t num_jobs) {
+int launch_jobs(Job *jobs, size_t num_jobs, pid_t *children_pgid) {
     int syscall_error = 0;
 
     // clear log file
@@ -172,9 +172,9 @@ int launch_jobs(Job *jobs, size_t num_jobs) {
     pid_t sched_pgid = getpgrp();
     tcsetpgrp(STDIN_FILENO, sched_pgid); 
 
-    pid_t children_pgid = -1;
+    *children_pgid = -1;
     for (size_t i = 0; i < num_jobs; i++) {
-        if (launch_job(&jobs[i], &children_pgid) == -1) {
+        if (launch_job(&jobs[i], children_pgid) == -1) {
             syscall_error = 1;
         }
     }
