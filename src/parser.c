@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 static void append_to_argv(Job *job, size_t *token_char_count, size_t *argv_size, char *token_buffer) {
-    job->argv[job->argc] = malloc(sizeof(char) * *token_char_count);
+    job->argv[job->argc] = malloc(sizeof(char) * *token_char_count + 1);
     if (job->argc + 1 == *argv_size) {
         *argv_size *= 2;
         job->argv = realloc(job->argv, sizeof(char*) * *argv_size);

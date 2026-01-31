@@ -85,6 +85,12 @@ int main(int argc, char *argv[]) {
     size_t num_jobs = 0;
     Job *jobs = parse_lines(cmds_array, cmds_count, &num_jobs);
 
+    for (size_t i = 0; i < cmds_count; i++) {
+        free(cmds_array[i]);
+    }
+
+    free(cmds_array);
+
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
@@ -111,6 +117,8 @@ int main(int argc, char *argv[]) {
     printf("round robin result: %d\n", status);
 
     print_jobs_debug_temp(jobs, num_jobs);
+
+    free_job_array(jobs, num_jobs);
 
     return 0;
 }

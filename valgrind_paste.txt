@@ -1,0 +1,5 @@
+valgrind \
+  --leak-check=full --show-leak-kinds=all \
+  --track-origins=yes --errors-for-leak-kinds=all \
+  --num-callers=30 --log-file=vg.%p.log \
+  bin/sched workload.txt

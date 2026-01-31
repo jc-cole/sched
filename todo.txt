@@ -1,8 +1,15 @@
 
-- design sigint protocol -> still hangs, needs fix
+Things that need to be logged: 
 
-- fix memory leaks
+    job started (pid, cmd)
 
-- design something to display scheduler actions
+    job scheduled/run (pid, time slice)
+
+    job stopped/continued (if applicable)
+
+    job exited (exit code / signal)
+
+    final summary (per-job runtime stats)
+
 
 - handle case where process number limit reached

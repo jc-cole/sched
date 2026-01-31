@@ -1,8 +1,6 @@
 #define _GNU_SOURCE
 
-
 #include "launcher.h"
-
 
 static int redirect_output_to_log(const char *path) {
     int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
@@ -93,17 +91,20 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         int st;
         if (waitpid(pid, &st, WUNTRACED) == -1) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         }
 
         JobStatus pre_exec_status = interpret_status(st);
         if (pre_exec_status != STOPPED) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         }
 
         if (kill(pid, SIGCONT) == -1) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         }
 
@@ -111,9 +112,11 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         ssize_t n = read(pipe[0], &marker, 1);
         if (n <= 0) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         } else if (marker != 'M') {
             job->status = EXEC_FAILURE;
+            printf("Job %s was unable to execvp. \n", job->argv[0]);
             return 1;
         }
 
@@ -129,6 +132,7 @@ static int launch_job(Job *job, pid_t *children_pgid) {
 
             if (r < 0) {
                 job->status = LAUNCH_FAILURE;
+                printf("Job %s failed to launch. \n", job->argv[0]);
                 return -1;
             }
 
@@ -137,24 +141,29 @@ static int launch_job(Job *job, pid_t *children_pgid) {
 
         if (got == sizeof(err)) {
             job->status = EXEC_FAILURE;
+            printf("Job %s was unable to execvp. \n", job->argv[0]);
             return 1;
         }
 
         if (kill(pid, SIGSTOP) == -1) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         }
 
         if (waitpid(pid, &st, WUNTRACED) == -1) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         }
 
         JobStatus post_exec_status = interpret_status(st);
         if (pre_exec_status == LAUNCH_FAILURE) {
             job->status = LAUNCH_FAILURE;
+            printf("Job %s failed to launch. \n", job->argv[0]);
             return -1;
         } else {
+            printf("Job %s launched with PID %d. \n", job->argv[0], pid);
             job->status = post_exec_status;
             return 0;
         }

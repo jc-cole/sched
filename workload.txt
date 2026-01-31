@@ -1,5 +1,4 @@
-sleep 1
+echo start
 sleep 1
 sleep 2
-sleep 5
-sleep 5
+echo end

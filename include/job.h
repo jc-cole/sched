@@ -43,7 +43,9 @@ typedef struct Job {
 
 Job make_empty_job(void);
 
-void free_job_contents(Job job);
+void free_job_contents(Job *job);
+
+void free_job_array(Job *jobs, size_t num_jobs);
 
 JobStatus interpret_status(int st);
 

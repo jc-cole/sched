@@ -7,6 +7,8 @@
 // and became inactive (not stopped/running)
 JobStatus update_job_status(Job *job, int wpid_status, size_t *active_job_count) {
 
+
+    JobStatus old_status = job->status;
     JobStatus new_status = interpret_status(wpid_status);
 
     if (
@@ -23,6 +25,25 @@ JobStatus update_job_status(Job *job, int wpid_status, size_t *active_job_count)
         job->exit_code = WEXITSTATUS(wpid_status);
     } else if (new_status == TERMINATED) {
         job->terminating_signal = WTERMSIG(wpid_status);
+    }
+
+    if (new_status != old_status) {
+        switch (new_status) {
+            case RUNNING:
+                printf("PID %d: continued\n", job->pid);
+                break;
+            case STOPPED:
+                printf("PID %d: stopped\n", job->pid);
+                break;
+            case EXITED:
+                printf("PID %d: exited with code %d\n", job->pid, job->exit_code);
+                break;
+            case TERMINATED:
+                printf("PID %d: terminated by signal %d\n", job->pid, job->terminating_signal);
+                break;
+            default:
+                break;
+        }
     }
 
     return new_status;
