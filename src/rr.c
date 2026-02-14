@@ -55,6 +55,11 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
             exit(EXIT_FAILURE);
         }
 
+        if (jobs[i].quanta_scheduled < SIZE_MAX) {
+            jobs[i].quanta_scheduled++;
+        }
+        
+
         int st;
         if (waitpid(jobs[i].pid, &st, WUNTRACED | WCONTINUED) == -1) {
             perror("waitpid");

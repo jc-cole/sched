@@ -12,6 +12,7 @@
 #include <poll.h>
 #include "util.h"
 #include <stdbool.h>
+#include <limits.h>
 
 int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid);
 

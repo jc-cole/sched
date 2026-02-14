@@ -17,6 +17,8 @@ void print_jobs_debug_temp(Job *jobs, size_t num_jobs) {
         printf("    status: %s\n", job_status_str[jobs[i].status]);
         printf("    exit code: %d\n", jobs[i].exit_code);
         printf("    terminating signal: %d\n", jobs[i].terminating_signal);
+        printf("    total scheduled quanta: %zu\n", jobs[i].quanta_scheduled);
+
         printf("\n");
     }
 }

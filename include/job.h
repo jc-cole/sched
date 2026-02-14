@@ -39,6 +39,7 @@ typedef struct Job {
     JobStatus status;
     int exit_code;
     int terminating_signal;
+    size_t quanta_scheduled;
 } Job;
 
 Job make_empty_job(void);
