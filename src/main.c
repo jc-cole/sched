@@ -40,34 +40,53 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    fseek(workload_file, 0L, SEEK_END);
-    long file_size = ftell(workload_file);
-    rewind(workload_file);
-
     size_t cmds_array_size = 8;
     char **cmds_array = malloc(sizeof(char*) * cmds_array_size);
+    if (cmds_array == NULL) {
+        perror("malloc");
+        fclose(workload_file);
+        return 1;
+    }
     
     size_t cmds_count = 0;
-    char cmd_str_buffer[file_size + 1];
+    char *line = NULL;
+    size_t line_capacity = 0;
+    ssize_t line_len;
     
-    while (fgets(cmd_str_buffer, (int) file_size, workload_file) != NULL) {
-
-        size_t cmd_str_len = strlen(cmd_str_buffer);
-        cmds_array[cmds_count] = malloc(sizeof(char) * (cmd_str_len + 1));
-
-        strcpy(cmds_array[cmds_count], cmd_str_buffer);
-
-        for (int i = 0; i < file_size + 1; i++) {
-            cmd_str_buffer[i] = 0;
-        }
-
-        cmds_count++;
-
+    while ((line_len = getline(&line, &line_capacity, workload_file)) != -1) {
+        (void)line_len;
         if (cmds_count == cmds_array_size) {
             cmds_array_size *= 2;
-            cmds_array = realloc(cmds_array, sizeof(char*) * cmds_array_size);
+            char **resized_cmds_array = realloc(cmds_array, sizeof(char*) * cmds_array_size);
+            if (resized_cmds_array == NULL) {
+                perror("realloc");
+                free(line);
+                for (size_t i = 0; i < cmds_count; i++) {
+                    free(cmds_array[i]);
+                }
+                free(cmds_array);
+                fclose(workload_file);
+                return 1;
+            }
+            cmds_array = resized_cmds_array;
         }
 
+        cmds_array[cmds_count] = line;
+        cmds_count++;
+        line = NULL;
+        line_capacity = 0;
+    }
+
+    free(line);
+
+    if (ferror(workload_file)) {
+        perror(config.workload_path);
+        for (size_t i = 0; i < cmds_count; i++) {
+            free(cmds_array[i]);
+        }
+        free(cmds_array);
+        fclose(workload_file);
+        return 1;
     }
 
     fclose(workload_file);
