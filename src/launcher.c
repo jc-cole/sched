@@ -48,7 +48,12 @@ static int redirect_output_to_log(const char *path) {
 
 static int launch_job(Job *job, pid_t *children_pgid) {
     int pipe[2];
-    pipe2(pipe, O_CLOEXEC);
+    if (pipe2(pipe, O_CLOEXEC) == -1) {
+        job->status = LAUNCH_FAILURE;
+        perror("pipe2");
+        return -1;
+    }
+
     pid_t pid = fork();
     if (pid == 0) {
         close(pipe[0]);
@@ -76,6 +81,12 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         }
 
         _exit(127);
+    } else if (pid == -1) {
+        close(pipe[0]);
+        close(pipe[1]);
+        job->status = LAUNCH_FAILURE;
+        perror("fork");
+        return -1;
     } else {
         close(pipe[1]);
 
@@ -92,6 +103,7 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         if (waitpid(pid, &st, WUNTRACED) == -1) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         }
 
@@ -99,12 +111,14 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         if (pre_exec_status != STOPPED) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         }
 
         if (kill(pid, SIGCONT) == -1) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         }
 
@@ -113,10 +127,12 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         if (n <= 0) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         } else if (marker != 'M') {
             job->status = EXEC_FAILURE;
             printf("Job %s was unable to execvp. \n", job->argv[0]);
+            close(pipe[0]);
             return 1;
         }
 
@@ -133,6 +149,7 @@ static int launch_job(Job *job, pid_t *children_pgid) {
             if (r < 0) {
                 job->status = LAUNCH_FAILURE;
                 printf("Job %s failed to launch. \n", job->argv[0]);
+                close(pipe[0]);
                 return -1;
             }
 
@@ -142,18 +159,21 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         if (got == sizeof(err)) {
             job->status = EXEC_FAILURE;
             printf("Job %s was unable to execvp. \n", job->argv[0]);
+            close(pipe[0]);
             return 1;
         }
 
         if (kill(pid, SIGSTOP) == -1) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         }
 
         if (waitpid(pid, &st, WUNTRACED) == -1) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         }
 
@@ -161,10 +181,12 @@ static int launch_job(Job *job, pid_t *children_pgid) {
         if (pre_exec_status == LAUNCH_FAILURE) {
             job->status = LAUNCH_FAILURE;
             printf("Job %s failed to launch. \n", job->argv[0]);
+            close(pipe[0]);
             return -1;
         } else {
             printf("Job %s launched with PID %d. \n", job->argv[0], pid);
             job->status = post_exec_status;
+            close(pipe[0]);
             return 0;
         }
     }
@@ -196,5 +218,3 @@ int launch_jobs(Job *jobs, size_t num_jobs, pid_t *children_pgid) {
 
     return 0;
 }
-
-

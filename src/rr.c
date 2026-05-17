@@ -5,25 +5,31 @@
 int reported_statuses[STATE_COUNT];
 
 int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) {
+    int result = 0;
+    int timer_fd = -1;
+    int sigchld_fd = -1;
+    int sigint_fd = -1;
 
     // debug
     for (int i = 0; i < STATE_COUNT; i++) {
         reported_statuses[i] = 0;
     }
 
-    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+    timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (timer_fd == -1) {
         return -1;
     }
 
-    int sigchld_fd = make_sigchld_fd();
+    sigchld_fd = make_sigchld_fd();
     if (sigchld_fd == -1) {
-        return -1;
+        result = -1;
+        goto cleanup;
     }
 
-    int sigint_fd = make_sigint_fd();
+    sigint_fd = make_sigint_fd();
     if (sigint_fd == -1) {
-        return -1;
+        result = -1;
+        goto cleanup;
     }
 
     struct pollfd poll_fds[3];
@@ -73,7 +79,8 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
 
         if (reset_timer(timer_fd, quantum_ms) == -1) {
             // error message from reset_timer
-            return -1;
+            result = -1;
+            goto cleanup;
         }
 
         while (1) {
@@ -93,12 +100,14 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
                 }
                 if (n != sizeof(si)) {
                     // error message
-                    return -1;
+                    result = -1;
+                    goto cleanup;
                 }
 
                 if (reap_and_update(jobs, num_jobs, &active_jobs, reported_statuses) == -1) {
                     // error message handle by reap_and_update
-                    return -1;
+                    result = -1;
+                    goto cleanup;
                 }
 
                 if (jobs[i].status != RUNNING) {
@@ -116,10 +125,12 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
                 }
                 if (n != sizeof(si)) {
                     // error message
-                    return -1;
+                    result = -1;
+                    goto cleanup;
                 }
                 /////
-                return sigint_protocol(jobs, num_jobs, poll_fds, children_pid, &active_jobs);
+                result = sigint_protocol(jobs, num_jobs, poll_fds, children_pid, &active_jobs);
+                goto cleanup;
             }
 
             if (poll_fds[0].revents & POLL_IN) { // quantum expiry
@@ -134,7 +145,8 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
 
                 if (bytes_read != sizeof(uint64_t)) {
                     // error message
-                    return -1;
+                    result = -1;
+                    goto cleanup;
                 }
 
                 if (kill(jobs[i].pid, SIGSTOP) == -1) {
@@ -154,6 +166,10 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
         }
     }
 
-    return 0;
-}
+cleanup:
+    if (sigint_fd != -1) close(sigint_fd);
+    if (sigchld_fd != -1) close(sigchld_fd);
+    if (timer_fd != -1) close(timer_fd);
 
+    return result;
+}
