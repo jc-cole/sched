@@ -184,8 +184,8 @@ static int launch_job(Job *job, pid_t *children_pgid) {
             close(pipe[0]);
             return -1;
         } else {
-            printf("Job %s launched with PID %d. \n", job->argv[0], pid);
             job->status = post_exec_status;
+            print_job_launch_verbose(job, *children_pgid);
             close(pipe[0]);
             return 0;
         }

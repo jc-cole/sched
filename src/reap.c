@@ -30,16 +30,20 @@ JobStatus update_job_status(Job *job, int wpid_status, size_t *active_job_count)
     if (new_status != old_status) {
         switch (new_status) {
             case RUNNING:
-                printf("PID %d: continued\n", job->pid);
+                verbose_printf("event: pid=%ld status=continued\n", (long)job->pid);
                 break;
             case STOPPED:
-                printf("PID %d: stopped\n", job->pid);
+                verbose_printf("event: pid=%ld status=stopped\n", (long)job->pid);
                 break;
             case EXITED:
-                printf("PID %d: exited with code %d\n", job->pid, job->exit_code);
+                verbose_printf("event: pid=%ld status=exited code=%d\n", (long)job->pid, job->exit_code);
                 break;
             case TERMINATED:
-                printf("PID %d: terminated by signal %d\n", job->pid, job->terminating_signal);
+                verbose_printf(
+                    "event: pid=%ld status=terminated signal=%d\n",
+                    (long)job->pid,
+                    job->terminating_signal
+                );
                 break;
             default:
                 break;
@@ -66,9 +70,6 @@ int sigint_protocol(Job *jobs, size_t num_jobs, struct pollfd poll_fds[3], pid_t
     }
 
     while (*active_job_count > 0) {
-
-        print_jobs_debug_temp(jobs, num_jobs);
-
         if (poll(poll_fds, 3, -1) == -1) {
             perror("poll");
             exit(EXIT_FAILURE);

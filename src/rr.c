@@ -56,6 +56,12 @@ int round_robin(Job *jobs, size_t num_jobs, int quantum_ms, pid_t children_pid) 
             continue;
         }
 
+        verbose_printf(
+            "schedule: pid=%ld quantum=%zu action=continue\n",
+            (long)jobs[i].pid,
+            jobs[i].quanta_scheduled + 1
+        );
+
         if (kill(jobs[i].pid, SIGCONT) == -1) {
             perror("kill");
             exit(EXIT_FAILURE);

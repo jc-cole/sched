@@ -31,8 +31,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Quantum: %d\n", config.quantum_ms);
-    printf("Scheduler policy: %s\n", config.policy);
+    set_verbose_output(config.verbose);
 
     FILE *workload_file = fopen(config.workload_path, "r");
     if (workload_file == NULL) {
@@ -100,6 +99,9 @@ int main(int argc, char *argv[]) {
 
     free(cmds_array);
 
+    printf("sched: policy=%s quantum=%dms jobs=%zu\n\n", config.policy, config.quantum_ms, num_jobs);
+    verbose_printf("workload: %s\n", config.workload_path);
+
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
@@ -109,25 +111,21 @@ int main(int argc, char *argv[]) {
     }
 
     pid_t children_pgid;
-    int active_jobs = launch_jobs(jobs, num_jobs, &children_pgid);
-
-    print_jobs_debug_temp(jobs, num_jobs);
-
-    for (size_t i = 0; i < num_jobs; i++) {
-        printf("PID: %d, PGID: %d\n", jobs[i].pid, getpgid(jobs[i].pid));
-    }
-
-    printf("launch jobs result: %d\n", active_jobs);
-
-    printf("children pgid: %d\n", children_pgid);
+    int launch_status = launch_jobs(jobs, num_jobs, &children_pgid);
+    verbose_printf("launch: status=%d children_pgid=%ld\n", launch_status, (long)children_pgid);
 
     int status = round_robin(jobs, num_jobs, config.quantum_ms, children_pgid);
 
-    printf("round robin result: %d\n", status);
+    verbose_printf("scheduler: status=%d\n\n", status);
 
-    print_jobs_debug_temp(jobs, num_jobs);
+    print_jobs_summary(jobs, num_jobs);
+    printf("\nchild output: children.log\n");
 
     free_job_array(jobs, num_jobs);
+
+    if (launch_status != 0 || status != 0) {
+        return 1;
+    }
 
     return 0;
 }

@@ -15,6 +15,7 @@ typedef struct Config {
     const char *policy;
     int quantum_ms;
     const char *workload_path;
+    bool verbose;
 } Config;
 
 void print_usage(const char *prog);
