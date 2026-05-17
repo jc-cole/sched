@@ -10,6 +10,7 @@
 #include <poll.h>
 #include <sys/signalfd.h>
 #include <stdbool.h>
+#include <errno.h>
 
 int reap_and_update(Job *jobs, size_t num_jobs, size_t *active_job_count, int* reported_statuses_debug);
 

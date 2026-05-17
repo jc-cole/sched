@@ -10,6 +10,7 @@ Job make_empty_job(void) {
     job.status = EMPTY;
     job.exit_code = -1;
     job.terminating_signal = -1;
+    job.quanta_scheduled = 0;
     return job;
 }
 

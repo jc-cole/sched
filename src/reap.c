@@ -53,7 +53,7 @@ int sigint_protocol(Job *jobs, size_t num_jobs, struct pollfd poll_fds[3], pid_t
 
     int SIGTERM_GRACE_PERIOD_MS = 1000;
 
-    reset_timer(poll_fds[3].fd, SIGTERM_GRACE_PERIOD_MS);
+    reset_timer(poll_fds[0].fd, SIGTERM_GRACE_PERIOD_MS);
 
     if (kill(-children_pid, SIGCONT) == -1) {
         perror("kill");
@@ -156,7 +156,9 @@ int reap_and_update(Job *jobs, size_t num_jobs, size_t *active_job_count, int* r
             return 0;
         }
 
-        if (pid == -1) {
+        if (pid == -1 && errno == ECHILD) {
+            return 0;
+        } else if (pid == -1) {
             return -1;
         }
 
