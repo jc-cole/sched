@@ -1,4 +1,2 @@
-Quantum: 100
-Scheduler policy: rr
-Job /bin/echo launched with PID 8. 
-hello world
+start
+end

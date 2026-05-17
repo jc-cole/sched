@@ -15,39 +15,29 @@
 #include <poll.h>
 #include <time.h>
 #include <unistd.h>
+#include <getopt.h>
 #include "job.h"
 #include "parser.h"
 #include "launcher.h"
 #include "rr.h"
 #include "util.h"
+#include "cli_parser.h"
 
 int main(int argc, char *argv[]) {
-    char* scheduler_policy = "none";
-    int quantum = 5;
-    char* workload_filename = NULL;
-    if (argc > 0) {
-        for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i], "--policy") == 0) {
-                scheduler_policy = argv[++i];
-            }
-            else if (strcmp(argv[i], "--quantum") == 0) {
-                quantum = atoi(argv[++i]);
-            } else {
-                workload_filename = argv[i];
-            }
-        }
-    } else {
-        printf("usage: ./sched --policy <policy> --quantum <ms> <workload.txt>\n");
-        exit(1);
+    Config config;
+
+    if (!parse_args(argc, argv, &config)) {
+        print_usage(argv[0]);
+        return 1;
     }
 
-    printf("Quantum: %d\n", quantum);
-    printf("Scheduler policy: %s\n", scheduler_policy);
+    printf("Quantum: %d\n", config.quantum_ms);
+    printf("Scheduler policy: %s\n", config.policy);
 
-    FILE *workload_file = fopen(workload_filename, "r");
+    FILE *workload_file = fopen(config.workload_path, "r");
     if (workload_file == NULL) {
-        printf("Unable to open file \"%s\"\n", workload_filename);
-        exit(1);
+        perror(config.workload_path);
+        return 1;
     }
 
     fseek(workload_file, 0L, SEEK_END);
@@ -112,7 +102,7 @@ int main(int argc, char *argv[]) {
 
     printf("children pgid: %d\n", children_pgid);
 
-    int status = round_robin(jobs, num_jobs, quantum, children_pgid);
+    int status = round_robin(jobs, num_jobs, config.quantum_ms, children_pgid);
 
     printf("round robin result: %d\n", status);
 
