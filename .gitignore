@@ -1,2 +1,16 @@
-build/*
-bin/*
+/build/
+/bin/
+
+# Generated runtime output
+children.log
+*.log
+vg.*.log
+valgrind_paste.txt
+
+# Local editor config
+/.vscode/
+
+# Compiled sample workloads
+/workloads/count_by
+/workloads/evens
+/workloads/odds
