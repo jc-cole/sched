@@ -128,11 +128,13 @@ Job *parse_lines(char *cmd_strings[], size_t num_strings, size_t *num_valid_jobs
     }
 
     Job *cleaned_job_array = malloc(sizeof(Job) * valid_jobs);
-    int cleaned_job_arr_idx = 0;
+    size_t cleaned_job_arr_idx = 0;
     for (size_t i = 0; i < num_strings; i++) {
         if (job_array[i].status == EXEC_READY) {
             cleaned_job_array[cleaned_job_arr_idx] = job_array[i];
             cleaned_job_arr_idx++;
+        } else {
+            free_job_contents(&job_array[i]);
         }
     }
 
